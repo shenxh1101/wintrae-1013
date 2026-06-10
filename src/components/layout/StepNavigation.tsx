@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Upload,
   FileText,
@@ -49,6 +50,8 @@ const steps: StepItem[] = [
   },
 ];
 
+const stepRoutes = ['import', 'templates', 'accounts', 'tasks', 'review'];
+
 interface StepNavigationProps {
   currentStep: number;
   batchId: string;
@@ -60,6 +63,7 @@ export default function StepNavigation({
   batchId,
   onStepChange,
 }: StepNavigationProps) {
+  const navigate = useNavigate();
   const [confirmStep, setConfirmStep] = useState<number | null>(null);
 
   const handleStepClick = (step: number) => {
@@ -68,11 +72,13 @@ export default function StepNavigation({
       setConfirmStep(step);
       return;
     }
+    navigate(`/batches/${batchId}/${stepRoutes[step]}`);
     onStepChange?.(step);
   };
 
   const handleConfirm = () => {
     if (confirmStep !== null) {
+      navigate(`/batches/${batchId}/${stepRoutes[confirmStep]}`);
       onStepChange?.(confirmStep);
       setConfirmStep(null);
     }

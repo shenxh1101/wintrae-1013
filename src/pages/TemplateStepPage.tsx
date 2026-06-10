@@ -112,7 +112,7 @@ const TemplateStepPage: React.FC = () => {
   const handleStepChange = (step: number) => {
     if (step > 1 && batchGeneratedDocs.length === 0 && selectedTemplates.length === 0) {
       showToast('请选择模板并生成文档后再继续', 'warning');
-      return;
+      return false;
     }
   };
 

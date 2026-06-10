@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useParams, Navigate } from 'react-router-dom';
 import {
   ChevronDown, ChevronUp, Filter, CheckSquare, Square,
@@ -9,7 +9,7 @@ import { cn } from '@/lib/utils';
 import { BatchStepLayout } from '@/components/layout';
 import { Badge, Button, Modal, ProgressBar } from '@/components/common';
 import { useBatchStore, useUIStore } from '@/stores';
-import { mockDepartments, accountItemConfigs, mockAccountItemsBatch2 as mockAccountItems } from '@/utils/mockData';
+import { accountItemConfigs } from '@/utils/mockData';
 import type { AccountItem, AccountType, Employee, Department } from '@/types';
 
 const ACCOUNT_TYPES: { type: AccountType; name: string; defaultOn: boolean }[] = [
@@ -21,10 +21,6 @@ const ACCOUNT_TYPES: { type: AccountType; name: string; defaultOn: boolean }[] =
   { type: 'oa', name: 'OA', defaultOn: false },
   { type: 'other', name: '其他', defaultOn: false },
 ];
-
-interface Props {
-  onStepChange?: (step: number) => void;
-}
 
 function StatusBadge({ status }: { status: AccountItem['status'] }) {
   const cfg = {
@@ -48,14 +44,14 @@ function AccountSwitch({ isOn, status, onClick }: { isOn: boolean; status: Accou
   );
 }
 
-export default function AccountsStepPage({ onStepChange }: Props) {
+export default function AccountsStepPage() {
   const { id: batchId } = useParams<{ id: string }>();
   const { employees } = useBatchStore();
   const { showToast } = useUIStore();
   const [deptFilter, setDeptFilter] = useState('all');
   const [expandedDepts, setExpandedDepts] = useState<Set<string>>(new Set());
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
-  const [accountItems, setAccountItems] = useState<AccountItem[]>(mockAccountItems);
+  const [accountItems, setAccountItems] = useState<AccountItem[]>([]);
   const [selectedAll, setSelectedAll] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewDept, setPreviewDept] = useState<Department | null>(null);
@@ -66,7 +62,58 @@ export default function AccountsStepPage({ onStepChange }: Props) {
   }
 
   const batchEmployees = useMemo(() => employees.filter(e => e.batchId === batchId), [employees, batchId]);
-  const filteredEmployees = useMemo(() => deptFilter === 'all' ? batchEmployees : batchEmployees.filter(e => e.departmentId === deptFilter), [batchEmployees, deptFilter]);
+
+  const deptOptions = useMemo(() => {
+    const deptMap = new Map<string, Department>();
+    batchEmployees.forEach(emp => {
+      if (!deptMap.has(emp.departmentId)) {
+        const deptEmps = batchEmployees.filter(e => e.departmentId === emp.departmentId);
+        deptMap.set(emp.departmentId, {
+          id: emp.departmentId,
+          name: emp.departmentName,
+          managerName: emp.managerName || '',
+          managerEmail: '',
+          employeeCount: deptEmps.length,
+        });
+      }
+    });
+    return Array.from(deptMap.values());
+  }, [batchEmployees]);
+
+  const generateDefaultAccountItems = (emps: Employee[]) => {
+    const items: AccountItem[] = [];
+    emps.forEach(emp => {
+      ACCOUNT_TYPES.forEach(({ type, defaultOn }) => {
+        const cfg = accountItemConfigs.find(c => c.type === type);
+        const deptMatch = cfg ? cfg.defaultDepartments.includes(emp.departmentId) : true;
+        const required = cfg ? cfg.defaultRequired : defaultOn;
+        if (deptMatch) {
+          items.push({
+            id: `acc-${emp.id}-${type}`,
+            employeeId: emp.id,
+            type,
+            typeName: cfg?.typeName || type,
+            required,
+            status: ['email', 'id_badge', 'access_card'].includes(type) ? 'completed' : 'pending',
+            applicant: '孙志强',
+            completedAt: ['email', 'id_badge', 'access_card'].includes(type) ? new Date().toISOString() : undefined,
+          });
+        }
+      });
+    });
+    return items;
+  };
+
+  useEffect(() => {
+    if (batchEmployees.length > 0 && accountItems.length === 0) {
+      setAccountItems(generateDefaultAccountItems(batchEmployees));
+    }
+  }, [batchEmployees, accountItems.length]);
+
+  const filteredEmployees = useMemo(() => {
+    if (deptFilter === 'all') return batchEmployees;
+    return batchEmployees.filter(e => e.departmentId === deptFilter || e.departmentName === deptFilter);
+  }, [batchEmployees, deptFilter]);
 
   const employeesByDept = useMemo(() => {
     const map: Record<string, Employee[]> = {};
@@ -79,13 +126,13 @@ export default function AccountsStepPage({ onStepChange }: Props) {
 
   const deptStats = useMemo(() => {
     const stats: Record<string, { total: number; completed: number }> = {};
-    mockDepartments.forEach(d => {
+    deptOptions.forEach(d => {
       const deptEmps = batchEmployees.filter(e => e.departmentId === d.id);
       const deptItems = accountItems.filter(ai => deptEmps.some(e => e.id === ai.employeeId));
       stats[d.id] = { total: deptItems.length, completed: deptItems.filter(ai => ai.status === 'completed').length };
     });
     return stats;
-  }, [batchEmployees, accountItems]);
+  }, [batchEmployees, accountItems, deptOptions]);
 
   const empAccountsMap = useMemo(() => {
     const map: Record<string, Record<AccountType, AccountItem | undefined>> = {};
@@ -130,7 +177,7 @@ export default function AccountsStepPage({ onStepChange }: Props) {
   const handleExportPDF = () => { showToast('申请单PDF已导出', 'success'); setPreviewOpen(false); };
 
   return (
-    <BatchStepLayout batchId={batchId} currentStep={2} onStepChange={onStepChange}>
+    <BatchStepLayout batchId={batchId} currentStep={2}>
       <div className="flex flex-col gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap items-center gap-3">
@@ -138,7 +185,7 @@ export default function AccountsStepPage({ onStepChange }: Props) {
               <Filter className="w-4 h-4 text-copper-500" />
               <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} className="bg-transparent text-sm text-navy-700 outline-none cursor-pointer">
                 <option value="all">全部部门</option>
-                {mockDepartments.map(d => <option key={d.id}>{d.name}</option>)}
+                {deptOptions.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <button onClick={handleSelectAll} className="flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-medium text-navy-700 hover:bg-slatebg-50 border border-slatebg-200 transition-colors">
@@ -150,9 +197,9 @@ export default function AccountsStepPage({ onStepChange }: Props) {
         </div>
 
         <div className="space-y-3">
-          {mockDepartments.map(dept => {
+          {deptOptions.map(dept => {
             const deptEmps = employeesByDept[dept.id] || [];
-            if (deptFilter !== 'all' && deptFilter !== dept.id) return null;
+            if (deptEmps.length === 0) return null;
             const isExpanded = expandedDepts.has(dept.id);
             const stats = deptStats[dept.id] || { total: 0, completed: 0 };
             return (

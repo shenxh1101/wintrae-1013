@@ -22,10 +22,6 @@ import { useBatchStore, useTaskStore, useUIStore } from '@/stores';
 import { mockTaskTemplates, mockUsers, mockDepartments } from '@/utils/mockData';
 import type { TaskTemplate, TaskPriority, UserRole, Task, TaskStatus, Employee } from '@/types';
 
-interface Props {
-  onStepChange?: (step: number) => void;
-}
-
 const ROLE_LABELS: Record<UserRole, string> = { hr: 'HR', admin: '行政', manager: '主管' };
 const ROLE_ICONS: Record<UserRole, typeof Shield> = { hr: Users, admin: Shield, manager: Briefcase };
 const PRIORITY_CONFIG: Record<TaskPriority, { label: string; variant: 'danger' | 'warning' | 'info' | 'neutral'; color: string }> = {
@@ -113,7 +109,7 @@ function NotifyToggle({ label, icon: Icon, checked, onChange }: NotifyToggleProp
   );
 }
 
-export default function TasksStepPage({ onStepChange }: Props) {
+export default function TasksStepPage() {
   const { id: batchId } = useParams<{ id: string }>();
   const { employees } = useBatchStore();
   const { tasks, createTasksFromTemplates, updateTask, updateTaskStatus } = useTaskStore();
@@ -239,7 +235,7 @@ export default function TasksStepPage({ onStepChange }: Props) {
   ];
 
   return (
-    <BatchStepLayout batchId={batchId} currentStep={3} onStepChange={onStepChange}>
+    <BatchStepLayout batchId={batchId} currentStep={3}>
       <div className="flex flex-col gap-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { useParams, Navigate } from 'react-router-dom';
+import { useParams, Navigate, useNavigate } from 'react-router-dom';
 import {
   AlertTriangle,
   FileText,
@@ -41,12 +41,10 @@ const FIELD_LABELS: Record<string, string> = {
 const STEP_ICONS = [ClipboardList, FileText, KeyRound, Users, BarChart3];
 
 const stepTitles = ['名单导入', '模板填充', '账号清单', '任务分派', '结果核对'];
+const stepRoutes = ['import', 'templates', 'accounts', 'tasks', 'review'];
 
-interface ReviewStepPageProps {
-  onNavigate?: (step: number) => void;
-}
-
-export default function ReviewStepPage({ onNavigate }: ReviewStepPageProps) {
+export default function ReviewStepPage() {
+  const navigate = useNavigate();
   const { id: batchId } = useParams<{ id: string }>();
   const { employees, batches } = useBatchStore();
   const { tasks } = useTaskStore();
@@ -198,7 +196,7 @@ export default function ReviewStepPage({ onNavigate }: ReviewStepPageProps) {
   };
 
   const handleStepNavigate = (step: number) => {
-    onNavigate?.(step);
+    navigate(`/batches/${batchId}/${stepRoutes[step]}`);
   };
 
   const handleExportReport = () => {
@@ -234,7 +232,7 @@ export default function ReviewStepPage({ onNavigate }: ReviewStepPageProps) {
   const RING_COLORS = ['#2d8659', '#dde4ee'];
 
   return (
-    <BatchStepLayout batchId={batchId} currentStep={4} onStepChange={handleStepNavigate}>
+    <BatchStepLayout batchId={batchId} currentStep={4}>
       <div className="space-y-6">
         {hasAlerts && (
           <div className="rounded-2xl border border-danger-200 bg-gradient-to-r from-danger-50 to-danger-100/50 p-5 animate-slide-in">

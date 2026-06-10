@@ -8,6 +8,8 @@ import AlertBanner from './import/AlertBanner';
 import DataPreviewTable from './import/DataPreviewTable';
 import FieldMappingSection from './import/FieldMappingSection';
 import type { Employee, MissingFieldAlert } from '@/types';
+import * as XLSX from 'xlsx';
+import Papa from 'papaparse';
 
 const fieldNameMappings: Record<string, string[]> = {
   name: ['姓名', 'name', '员工姓名', 'Name'],
@@ -25,7 +27,7 @@ const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().
 
 const ImportStepPage: React.FC = () => {
   const { batchId = '' } = useParams<{ batchId: string }>();
-  const { employees, importEmployees, updateEmployee, setCurrentBatch } = useBatchStore();
+  const { employees, importEmployees, updateEmployee, setCurrentBatch, clearBatchEmployees } = useBatchStore();
   const { showToast } = useUIStore();
 
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -60,42 +62,105 @@ const ImportStepPage: React.FC = () => {
     setUploadedFile(file);
     showToast(`文件 "${file.name}" 已选择，正在解析...`, 'info');
 
-    const sampleColumns = ['姓名', '岗位', '入职日期', '部门', '手机号', '邮箱', '身份证'];
-    setImportColumns(sampleColumns);
+    const ext = file.name.split('.').pop()?.toLowerCase();
 
-    const defaultMappings: Record<string, string> = {};
-    sampleColumns.forEach((col) => {
-      for (const [systemField, aliases] of Object.entries(fieldNameMappings)) {
-        if (aliases.some((a) => a.toLowerCase() === col.toLowerCase())) {
-          defaultMappings[col] = systemField;
-          break;
+    try {
+      let headers: string[] = [];
+      let dataRows: Record<string, unknown>[] = [];
+
+      if (ext === 'xlsx' || ext === 'xls') {
+        const buffer = await file.arrayBuffer();
+        const wb = XLSX.read(buffer, { type: 'array' });
+        const firstSheetName = wb.SheetNames[0];
+        const sheetData = XLSX.utils.sheet_to_json(wb.Sheets[firstSheetName], { header: 1 }) as string[][];
+
+        if (sheetData.length === 0) {
+          showToast('Excel 文件为空', 'error');
+          return;
         }
+
+        headers = sheetData[0].map((h) => String(h ?? ''));
+        dataRows = sheetData.slice(1).filter((row) => row.some((cell) => cell !== undefined && cell !== null && cell !== '')).map((row) => {
+          const obj: Record<string, unknown> = {};
+          headers.forEach((header, idx) => {
+            obj[header] = row[idx];
+          });
+          return obj;
+        });
+      } else if (ext === 'csv') {
+        const result = await new Promise<Papa.ParseResult<Record<string, unknown>>>((resolve, reject) => {
+          Papa.parse<Record<string, unknown>>(file, {
+            header: true,
+            skipEmptyLines: true,
+            complete: (results) => resolve(results),
+            error: (err) => reject(err),
+          });
+        });
+
+        if (result.meta.fields && result.meta.fields.length > 0) {
+          headers = result.meta.fields;
+        }
+        dataRows = result.data.filter((row) => Object.values(row).some((v) => v !== undefined && v !== null && v !== ''));
+      } else {
+        showToast('不支持的文件格式，请上传 Excel 或 CSV 文件', 'error');
+        return;
       }
-    });
-    setFieldMappings(defaultMappings);
 
-    const mockEmployees: Partial<Employee>[] = [
-      { name: '王浩然', position: '高级前端工程师', joinDate: '2026-06-15', departmentName: '技术部', phone: '13700137101', email: 'wanghaoran@company.com', idCard: '110101199503151234' },
-      { name: '李思琪', position: 'Java后端工程师', joinDate: '2026-06-15', departmentName: '技术部', email: 'lisiqi@company.com', idCard: '310101199608204567' },
-      { name: '张嘉怡', position: '市场推广专员', joinDate: '2026-06-15', departmentName: '市场部', email: 'zhangjiayi@company.com' },
-    ];
+      if (headers.length === 0) {
+        showToast('未能识别到表头', 'error');
+        return;
+      }
 
-    setTimeout(() => {
-      importEmployees(batchId, mockEmployees);
-      showToast(`成功导入 ${mockEmployees.length} 条员工记录`, 'success');
-    }, 800);
+      setImportColumns(headers);
+
+      const defaultMappings: Record<string, string> = {};
+      headers.forEach((col) => {
+        for (const [systemField, aliases] of Object.entries(fieldNameMappings)) {
+          if (aliases.some((a) => a.toLowerCase() === col.toLowerCase())) {
+            defaultMappings[col] = systemField;
+            break;
+          }
+        }
+      });
+      setFieldMappings(defaultMappings);
+
+      clearBatchEmployees(batchId);
+
+      const employeesData: Partial<Employee>[] = dataRows.map((row) => {
+        const emp: Partial<Employee> = {};
+        for (const [header, value] of Object.entries(row)) {
+          const mappedField = defaultMappings[header];
+          if (mappedField && value !== undefined && value !== null) {
+            (emp as Record<string, unknown>)[mappedField] = String(value);
+          }
+        }
+        return emp;
+      });
+
+      importEmployees(batchId, employeesData);
+      showToast(`成功导入 ${employeesData.length} 条员工记录`, 'success');
+    } catch (error) {
+      console.error('解析文件失败:', error);
+      showToast('文件解析失败，请检查文件格式', 'error');
+    }
   };
 
   const handleRemoveFile = () => {
     setUploadedFile(null);
     setImportColumns([]);
     setFieldMappings({});
+    clearBatchEmployees(batchId);
     showToast('已移除文件', 'info');
   };
 
   const handleDownloadTemplate = () => {
     showToast('Excel模板下载中...', 'info');
-    setTimeout(() => showToast('模板已下载到本地', 'success'), 1000);
+    const headers = ['姓名', '岗位', '入职日期', '部门', '手机号', '邮箱', '身份证', '性别', '部门主管'];
+    const ws = XLSX.utils.aoa_to_sheet([headers]);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, '员工名单');
+    XLSX.writeFile(wb, '员工导入模板.xlsx');
+    showToast('模板已下载到本地', 'success');
   };
 
   const handleMappingChange = (importCol: string, systemField: string) => {
@@ -153,10 +218,10 @@ const ImportStepPage: React.FC = () => {
     if (step > 0 && !isValid) {
       if (batchEmployees.length === 0) {
         showToast('请先导入或添加员工信息', 'warning');
-        return;
+        return false;
       }
       showToast(`仍有 ${missingFieldAlerts.length} 名员工缺失必填字段，请先补录`, 'warning');
-      return;
+      return false;
     }
   };
 

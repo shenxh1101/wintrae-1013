@@ -1,4 +1,5 @@
 import { useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, ArrowRight, Users as UsersIcon, Calendar, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useBatchStore, useUIStore } from '@/stores';
@@ -11,7 +12,7 @@ interface BatchStepLayoutProps {
   batchId: string;
   currentStep: number;
   children: ReactNode;
-  onStepChange?: (step: number) => void;
+  onStepChange?: (step: number) => void | boolean;
 }
 
 const statusConfig: Record<BatchStatus, { label: string; variant: 'success' | 'warning' | 'danger' | 'info' | 'neutral' }> = {
@@ -31,12 +32,15 @@ const stepTitles = [
   '结果核对',
 ];
 
+const stepRoutes = ['import', 'templates', 'accounts', 'tasks', 'review'];
+
 export default function BatchStepLayout({
   batchId,
   currentStep,
   children,
   onStepChange,
 }: BatchStepLayoutProps) {
+  const navigate = useNavigate();
   const { batches, updateBatch } = useBatchStore();
   const { showToast } = useUIStore();
 
@@ -46,25 +50,29 @@ export default function BatchStepLayout({
 
   const handlePrev = () => {
     if (currentStep > 0) {
-      onStepChange?.(currentStep - 1);
+      navigate(`/batches/${batchId}/${stepRoutes[currentStep - 1]}`);
     }
   };
 
   const handleNext = () => {
     if (currentStep < 4) {
       const nextStep = currentStep + 1;
-      onStepChange?.(nextStep);
+      if (onStepChange) {
+        const result = onStepChange(nextStep);
+        if (result === false) return;
+      }
       updateBatch(batchId, {
         currentStep: nextStep,
         status: nextStep === 4 ? 'in_progress' : batch?.status,
       });
+      navigate(`/batches/${batchId}/${stepRoutes[nextStep]}`);
       showToast(`已进入「${stepTitles[nextStep]}」步骤`, 'success');
     }
   };
 
   const handleStepChange = (step: number) => {
-    onStepChange?.(step);
     updateBatch(batchId, { currentStep: step });
+    navigate(`/batches/${batchId}/${stepRoutes[step]}`);
   };
 
   if (!batch) {

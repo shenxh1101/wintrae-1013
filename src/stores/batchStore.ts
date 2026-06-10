@@ -14,6 +14,7 @@ interface BatchStore {
   setCurrentBatch: (id: string | null) => void;
   importEmployees: (batchId: string, employees: Partial<Employee>[]) => void;
   updateEmployee: (id: string, data: Partial<Employee>) => void;
+  clearBatchEmployees: (batchId: string) => void;
 }
 
 const generateId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
@@ -130,6 +131,16 @@ export const useBatchStore = create<BatchStore>()(
           if (emp) {
             Object.assign(emp, data);
             emp._missingFields = computeMissingFields(emp);
+          }
+        });
+      },
+
+      clearBatchEmployees: (batchId) => {
+        set((state) => {
+          state.employees = state.employees.filter(e => e.batchId !== batchId);
+          const batch = state.batches.find(b => b.id === batchId);
+          if (batch) {
+            batch.employeeCount = 0;
           }
         });
       },

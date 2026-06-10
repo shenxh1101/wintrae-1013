@@ -27,6 +27,127 @@ const categoryColors: Record<string, string> = {
   other: 'from-slatebg-50 to-slatebg-100 border-slatebg-200',
 };
 
+const generateTemplateSpecificContent = (templateName: string, employee: Employee): string => {
+  switch (templateName) {
+    case '劳动合同':
+      return `
+        <div style="margin-top:40px">
+          <h2 style="color:#1e3a5f;font-size:18px;margin-bottom:20px">主要条款</h2>
+          <div style="line-height:2;color:#333;font-size:14px">
+            <p>一、劳动合同期限：自 ${employee.joinDate} 起，试用期 3 个月。</p>
+            <p>二、工作岗位：${employee.position}</p>
+            <p>三、工作地点：公司总部及业务相关场所</p>
+            <p>四、工作时间：标准工时制，每周工作不超过 40 小时</p>
+            <p>五、劳动报酬：按月支付，具体金额详见薪酬通知单</p>
+            <p>六、社会保险：公司按国家规定为员工缴纳各项社会保险</p>
+          </div>
+        </div>`;
+    case '保密协议':
+      return `
+        <div style="margin-top:40px">
+          <h2 style="color:#1e3a5f;font-size:18px;margin-bottom:20px">保密内容</h2>
+          <div style="line-height:2;color:#333;font-size:14px">
+            <p>一、技术信息：包括但不限于技术方案、工程设计、软件代码等</p>
+            <p>二、经营信息：包括但不限于客户名单、营销策略、财务数据等</p>
+            <p>三、保密期限：在职期间及离职后两年内</p>
+            <p>四、违约责任：违反保密义务应承担相应法律责任</p>
+          </div>
+        </div>`;
+    case '竞业限制协议':
+      return `
+        <div style="margin-top:40px">
+          <h2 style="color:#1e3a5f;font-size:18px;margin-bottom:20px">竞业限制条款</h2>
+          <div style="line-height:2;color:#333;font-size:14px">
+            <p>一、限制范围：不得在与公司有竞争关系的单位任职</p>
+            <p>二、限制期限：离职后 12 个月内</p>
+            <p>三、限制地域：公司业务覆盖的主要城市</p>
+            <p>四、补偿金：公司按月支付竞业限制补偿金</p>
+          </div>
+        </div>`;
+    case '设备领用单':
+      return `
+        <div style="margin-top:40px">
+          <h2 style="color:#1e3a5f;font-size:18px;margin-bottom:20px">设备清单</h2>
+          <table class="info-table">
+            <tr><td>笔记本电脑</td><td>1 台</td></tr>
+            <tr><td>显示器</td><td>1 台</td></tr>
+            <tr><td>键盘鼠标</td><td>1 套</td></tr>
+            <tr><td>办公文具</td><td>1 套</td></tr>
+          </table>
+        </div>`;
+    case '入职须知':
+      return `
+        <div style="margin-top:40px">
+          <h2 style="color:#1e3a5f;font-size:18px;margin-bottom:20px">入职须知</h2>
+          <div style="line-height:2;color:#333;font-size:14px">
+            <p>一、请于 ${employee.joinDate} 上午 9:00 到人事部报到</p>
+            <p>二、报到时请携带身份证、学历证书原件</p>
+            <p>三、办公地点：${employee.workstation || '详见工位安排'}</p>
+            <p>四、如有疑问请联系部门主管：${employee.managerName || '人事部'}</p>
+          </div>
+        </div>`;
+    default:
+      return '';
+  }
+};
+
+const downloadFile = (htmlContent: string, filename: string) => {
+  const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+};
+
+const generateDocumentHtml = (doc: GeneratedDocument, employee: Employee, templateName: string) => {
+  return `
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>${templateName}</title>
+  <style>
+    body { font-family: "Microsoft YaHei", sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+    h1 { text-align: center; color: #1e3a5f; border-bottom: 2px solid #d4a574; padding-bottom: 20px; }
+    .info-table { width: 100%; margin-top: 30px; border-collapse: collapse; }
+    .info-table td { padding: 12px 16px; border: 1px solid #e0e0e0; }
+    .info-table td:first-child { background: #f5f7fa; width: 120px; font-weight: bold; color: #1e3a5f; }
+    .sign-section { margin-top: 80px; display: flex; justify-content: space-between; }
+    .sign-box { text-align: center; }
+    .sign-line { width: 150px; border-bottom: 1px solid #333; margin-bottom: 8px; }
+  </style>
+</head>
+<body>
+  <h1>${templateName}</h1>
+  <div style="margin-top:20px;color:#666">合同编号：${doc.id.slice(0, 12).toUpperCase()}</div>
+  <table class="info-table">
+    <tr><td>姓名</td><td>${employee.name}</td></tr>
+    <tr><td>岗位</td><td>${employee.position}</td></tr>
+    <tr><td>入职日期</td><td>${employee.joinDate}</td></tr>
+    <tr><td>部门</td><td>${employee.departmentName}</td></tr>
+    <tr><td>邮箱</td><td>${employee.email || '—'}</td></tr>
+    <tr><td>手机号</td><td>${employee.phone || '—'}</td></tr>
+  </table>
+  ${generateTemplateSpecificContent(templateName, employee)}
+  <div class="sign-section">
+    <div class="sign-box">
+      <div class="sign-line"></div>
+      <div>员工签字</div>
+      <div style="margin-top:4px;font-size:12px;color:#999">日期：</div>
+    </div>
+    <div class="sign-box">
+      <div class="sign-line"></div>
+      <div>公司盖章</div>
+      <div style="margin-top:4px;font-size:12px;color:#999">日期：</div>
+    </div>
+  </div>
+</body>
+</html>`;
+};
+
 const DownloadSection: React.FC<DownloadSectionProps> = ({
   documents,
   employees,
@@ -60,17 +181,43 @@ const DownloadSection: React.FC<DownloadSectionProps> = ({
     });
   };
 
-  const handleDownloadAll = () => {
-    console.log('Download all:', documents.length, 'files');
+  const handleDownloadSingle = (doc: GeneratedDocument) => {
+    const employee = employees.find((e) => e.id === doc.employeeId);
+    if (!employee) return;
+    const templateName = doc.templateName;
+    const htmlContent = generateDocumentHtml(doc, employee, templateName);
+    const filename = `${employee.name}_${templateName}.html`;
+    downloadFile(htmlContent, filename);
   };
 
   const handleDownloadEmployee = (empId: string) => {
     const empDocs = docsByEmployee[empId];
-    console.log('Download for employee:', empId, empDocs.length, 'files');
+    const employee = employees.find((e) => e.id === empId);
+    if (!employee || !empDocs) return;
+    empDocs.forEach((doc, index) => {
+      setTimeout(() => {
+        const templateName = doc.templateName;
+        const htmlContent = generateDocumentHtml(doc, employee, templateName);
+        const filename = `${employee.name}_${templateName}.html`;
+        downloadFile(htmlContent, filename);
+      }, index * 500);
+    });
   };
 
-  const handleDownloadSingle = (doc: GeneratedDocument) => {
-    console.log('Download:', doc.templateName, doc.fileUrl);
+  const handleDownloadAll = () => {
+    let index = 0;
+    documents.forEach((doc) => {
+      const employee = employees.find((e) => e.id === doc.employeeId);
+      if (employee) {
+        setTimeout(() => {
+          const templateName = doc.templateName;
+          const htmlContent = generateDocumentHtml(doc, employee, templateName);
+          const filename = `${employee.name}_${templateName}.html`;
+          downloadFile(htmlContent, filename);
+        }, index * 400);
+        index++;
+      }
+    });
   };
 
   const totalSize = documents.reduce((sum, d) => sum + d.fileSize, 0);
