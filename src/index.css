@@ -1,0 +1,161 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Noto Sans SC", system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+@layer base {
+  html {
+    font-family: "Noto Sans SC", system-ui, sans-serif;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-slatebg-50 text-navy-900 antialiased;
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(30, 58, 95, 0.04) 1px, transparent 0);
+    background-size: 24px 24px;
+    min-height: 100vh;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Noto Serif SC", Georgia, serif;
+    @apply font-semibold text-navy-900;
+  }
+
+  ::selection {
+    @apply bg-copper-300/40 text-navy-900;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-slatebg-100 rounded;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-navy-200 rounded hover:bg-navy-300 transition-colors;
+  }
+
+  ::-webkit-scrollbar-thumb:active {
+    @apply bg-navy-400;
+  }
+}
+
+@layer components {
+  .font-serif-sc {
+    font-family: "Noto Serif SC", Georgia, serif;
+  }
+
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-md border border-white/60 shadow-sm;
+  }
+
+  .gradient-primary {
+    background: linear-gradient(135deg, #1e3a5f 0%, #2d4d76 50%, #1a2f4d 100%);
+  }
+
+  .gradient-copper {
+    background: linear-gradient(135deg, #d4a574 0%, #dc965c 100%);
+  }
+
+  .gradient-card-1 {
+    background: linear-gradient(135deg, #1e3a5f 0%, #3d6391 100%);
+  }
+
+  .gradient-card-2 {
+    background: linear-gradient(135deg, #c0874c 0%, #d4a574 100%);
+  }
+
+  .gradient-card-3 {
+    background: linear-gradient(135deg, #2d4d76 0%, #4a90b8 100%);
+  }
+
+  .gradient-card-4 {
+    background: linear-gradient(135deg, #1e6a47 0%, #2d8659 100%);
+  }
+
+  .gradient-progress {
+    background: linear-gradient(90deg, #1e3a5f 0%, #3d6391 40%, #d4a574 100%);
+  }
+
+  .btn-shadow {
+    box-shadow: 0 2px 8px -2px rgba(30, 58, 95, 0.25), 0 1px 3px -1px rgba(30, 58, 95, 0.1);
+  }
+
+  .btn-shadow-hover {
+    box-shadow: 0 8px 24px -4px rgba(30, 58, 95, 0.35), 0 2px 6px -2px rgba(30, 58, 95, 0.15);
+  }
+
+  .card-shadow {
+    box-shadow: 0 1px 3px -1px rgba(30, 58, 95, 0.08), 0 1px 2px -2px rgba(30, 58, 95, 0.06);
+  }
+
+  .card-shadow-hover {
+    box-shadow: 0 12px 32px -8px rgba(30, 58, 95, 0.18), 0 4px 12px -4px rgba(30, 58, 95, 0.1);
+  }
+
+  .input-focus-ring {
+    @apply outline-none ring-2 ring-navy-400/40 border-navy-400;
+  }
+
+  .table-zebra tbody tr:nth-child(odd) {
+    @apply bg-slatebg-50/50;
+  }
+
+  .table-zebra tbody tr:hover {
+    @apply bg-navy-50/60 transition-colors;
+  }
+
+  .step-connector {
+    position: relative;
+  }
+
+  .step-connector::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    width: 2px;
+    height: 40px;
+    transform: translateX(-50%);
+    @apply bg-slatebg-200;
+  }
+
+  .step-connector-completed::after {
+    @apply bg-success-400;
+  }
+}
+
+@layer utilities {
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .bg-grid {
+    background-image:
+      linear-gradient(rgba(30, 58, 95, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(30, 58, 95, 0.03) 1px, transparent 1px);
+    background-size: 32px 32px;
+  }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
